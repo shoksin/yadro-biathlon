@@ -10,12 +10,14 @@ import (
 
 func main() {
 	saveLogs := flag.String("save_logs", "", "save logs to file")
-	eventsFile := flag.String("events_file", "./config/events.json", "file with events")
+	eventsFile := flag.String("events_file", "./config/events", "file with events")
+	configFile := flag.String("config_file", "./config/config.json", "file with config")
+	resultFile := flag.String("result_file", "resultingTable.json", "file with results")
 	flag.Parse()
 
-	conf, err := config.LoadConfig("./config/config.json")
+	conf, err := config.LoadConfig(*configFile)
 	if err != nil {
-		fmt.Printf("Error loading configuration: %v\n", err)
+		fmt.Printf("Error loading configuration(%s): %v\n", *configFile, err)
 		return
 	}
 
@@ -36,15 +38,14 @@ func main() {
 
 	processor.ProcessEvents(events)
 
-	err = processor.SaveLog("outputLog.txt")
-	if err != nil {
-		fmt.Printf("Error saving log: %v\n", err)
-	}
-
-	err = processor.SaveReport("resultingTable.txt")
+	err = processor.SaveReport(*resultFile)
 	if err != nil {
 		fmt.Printf("Error saving report: %v\n", err)
 	}
 
-	fmt.Println("Processing completed successfully")
+	fmt.Println("\nProcessing completed successfully")
+	if *saveLogs != "" {
+		fmt.Printf("Logs saved to: %s\n", *saveLogs)
+	}
+	fmt.Printf("Report saved to:%s\n", *resultFile)
 }

@@ -1,11 +1,13 @@
 package processor
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"yadro-test/config"
 	"yadro-test/messages"
@@ -16,7 +18,9 @@ type EventProcessor struct {
 	Config      config.Configuration
 	Competitors map[int]*models.Competitor
 	Events      []models.Event
-	OutputLog   []string
+	logFile     *os.File
+	logWriter   *bufio.Writer
+	mu          sync.Mutex
 }
 
 func NewEventProcessor(config config.Configuration) *EventProcessor {
@@ -24,8 +28,45 @@ func NewEventProcessor(config config.Configuration) *EventProcessor {
 		Config:      config,
 		Competitors: make(map[int]*models.Competitor),
 		Events:      []models.Event{},
-		OutputLog:   []string{},
 	}
+}
+
+func (ep *EventProcessor) WriteLog(logText string) {
+	fmt.Println(logText)
+
+	if ep.logWriter != nil {
+		_, err := ep.logWriter.WriteString(logText + "\n")
+		if err != nil {
+			fmt.Printf("Warning: error writing to log file: %v\n", err)
+		}
+		ep.logWriter.Flush()
+	}
+}
+
+func (ep *EventProcessor) Close() error {
+	if ep.logFile == nil {
+		return nil
+	}
+
+	if ep.logWriter != nil {
+		err := ep.logWriter.Flush()
+		if err != nil {
+			return err
+		}
+	}
+
+	return ep.logFile.Close()
+}
+
+func (ep *EventProcessor) EnableLogFile(filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+
+	ep.logFile = file
+	ep.logWriter = bufio.NewWriter(file)
+	return nil
 }
 
 func (ep *EventProcessor) ProcessEvent(event models.Event) {
@@ -42,7 +83,7 @@ func (ep *EventProcessor) ProcessEvent(event models.Event) {
 	switch event.ID {
 	case 1: //Участник зарегистрирован
 		comp.Status = models.Registered
-		ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event1, event.TimeString, comp.ID))
+		ep.WriteLog(fmt.Sprintf(messages.Event1, event.TimeString, comp.ID))
 
 	case 2: //Установлено время старта
 		startTime, err := time.Parse(config.TimeFormat, event.ExtraParams)
@@ -51,69 +92,71 @@ func (ep *EventProcessor) ProcessEvent(event models.Event) {
 			return
 		}
 		comp.PlannedStart = startTime
+		comp.LapStartTime = startTime
 		comp.Status = models.Registered
-		ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event2, event.TimeString, comp.ID, event.ExtraParams))
+		ep.WriteLog(fmt.Sprintf(messages.Event2, event.TimeString, comp.ID, event.ExtraParams))
 
 	case 3: //Участник на стартовой линии
 		comp.Status = models.OnStartLine
-		ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event3, event.TimeString, comp.ID))
+		ep.WriteLog(fmt.Sprintf(messages.Event3, event.TimeString, comp.ID))
 	case 4: //Участник стартовал
 		comp.ActualStart = event.Time
-		comp.LapStartTime = event.Time
 		comp.CurrentLap = 1
 		comp.Status = models.Started
-		ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event4, event.TimeString, comp.ID))
+		ep.WriteLog(fmt.Sprintf(messages.Event4, event.TimeString, comp.ID))
 	case 5: //Участник на огневом рубеже
 		comp.Status = models.OnFiringRange
-		ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event5, event.TimeString, comp.ID, event.ExtraParams))
+		ep.WriteLog(fmt.Sprintf(messages.Event5, event.TimeString, comp.ID, event.ExtraParams))
 	case 6: //Мишень была поражена
 		comp.Hits++
-		ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event6, event.TimeString, event.ExtraParams, comp.ID))
+		ep.WriteLog(fmt.Sprintf(messages.Event6, event.TimeString, event.ExtraParams, comp.ID))
 	case 7: //Участник покинул огневой рубеж
 		comp.Shots += 5
 		comp.Status = models.LeftFiringRange
-		ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event7, event.TimeString, comp.ID))
+		ep.WriteLog(fmt.Sprintf(messages.Event7, event.TimeString, comp.ID))
 	case 8: //Участник заехал на штрафные круги
 		comp.PenaltyStartTime = event.Time
 		comp.Status = models.OnPenaltyLaps
-		ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event8, event.TimeString, comp.ID))
+		ep.WriteLog(fmt.Sprintf(messages.Event8, event.TimeString, comp.ID))
 	case 9: //Участик покинул штрафные круги
 		penaltyTime := event.Time.Sub(comp.PenaltyStartTime)
 		misses := comp.Shots - comp.Hits
 		penaltyDistance := misses * ep.Config.PenaltyLen
 
+		comp.FullPenaltyTime = comp.FullPenaltyTime + penaltyTime
+
 		var speed float64 = 0
 		if penaltyTime.Seconds() > 0 {
-			speed = float64(penaltyDistance) / penaltyTime.Seconds()
+			speed = float64(penaltyDistance) / comp.FullPenaltyTime.Seconds()
 		}
 
 		comp.PenaltyResult = models.PenaltyResult{
-			Time:  penaltyTime,
+			Time:  comp.FullPenaltyTime,
 			Speed: speed,
 		}
 		comp.Status = models.LeftPenaltyLaps
-		ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event9, event.TimeString, comp.ID))
+		ep.WriteLog(fmt.Sprintf(messages.Event9, event.TimeString, comp.ID))
 	case 10: //Участник закончил основной круг
-		lapTime := event.Time.Sub(comp.ActualStart)
+		lapTime := event.Time.Sub(comp.LapStartTime)
 		speed := float64(ep.Config.LapLen) / lapTime.Seconds()
 		comp.LapsResult = append(comp.LapsResult, models.LapResult{
 			Time:  lapTime,
 			Speed: speed,
 		})
 		comp.Status = models.FinishedLap
-		ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event10, event.TimeString, comp.ID))
+		ep.WriteLog(fmt.Sprintf(messages.Event10, event.TimeString, comp.ID))
 
 		if comp.CurrentLap >= ep.Config.Laps {
 			comp.Status = models.Finished
-			comp.TotalTime = event.Time.Sub(comp.ActualStart)
-			ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event33, event.TimeString, comp.ID))
+			comp.TotalTime = event.Time.Sub(comp.PlannedStart)
+			ep.WriteLog(fmt.Sprintf(messages.Event33, event.TimeString, comp.ID))
 		} else {
 			comp.CurrentLap++
 			comp.LapStartTime = event.Time
 		}
 	case 11: //Участник не может продолжить
 		comp.Status = models.NotFinished
-		ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event11, event.TimeString, comp.ID, event.ExtraParams))
+		ep.WriteLog(fmt.Sprintf(messages.Event11, event.TimeString, comp.ID, event.ExtraParams))
 	}
 
 	ep.Events = append(ep.Events, event)
@@ -135,14 +178,13 @@ func (ep *EventProcessor) CheckDisqualifications() {
 	startDeltaDuration := time.Duration(h)*time.Hour + time.Duration(m)*time.Minute + time.Duration(s)*time.Second
 
 	for _, comp := range ep.Competitors {
-		if comp.Status == models.Registered || comp.Status == models.OnStartLine {
-			endStartInterval := comp.PlannedStart.Add(startDeltaDuration)
-			if comp.ActualStart.IsZero() || comp.ActualStart.After(endStartInterval) {
-				comp.Status = models.NotStarted
-				disqualificationTimeStr := models.FormatTimeString(endStartInterval.Add(time.Millisecond))
-				ep.OutputLog = append(ep.OutputLog, fmt.Sprintf(messages.Event32, disqualificationTimeStr, comp.ID))
-			}
+		endStartInterval := comp.PlannedStart.Add(startDeltaDuration)
+		if comp.ActualStart.IsZero() || comp.ActualStart.After(endStartInterval) || comp.ActualStart.Before(comp.PlannedStart) {
+			comp.Status = models.NotStarted
+			disqualificationTimeStr := models.FormatTimeString(endStartInterval.Add(time.Millisecond))
+			ep.WriteLog(fmt.Sprintf(messages.Event32, disqualificationTimeStr, comp.ID))
 		}
+
 	}
 }
 
@@ -227,9 +269,4 @@ func (ep *EventProcessor) GenerateReport() string {
 func (ep *EventProcessor) SaveReport(filename string) error {
 	report := ep.GenerateReport()
 	return os.WriteFile(filename, []byte(report), 0644)
-}
-
-func (ep *EventProcessor) SaveLog(filename string) error {
-	log := strings.Join(ep.OutputLog, "\n")
-	return os.WriteFile(filename, []byte(log), 0644)
 }

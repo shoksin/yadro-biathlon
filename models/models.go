@@ -52,6 +52,7 @@ type Competitor struct {
 	PenaltyResult    PenaltyResult
 	LapStartTime     time.Time
 	PenaltyStartTime time.Time
+	FullPenaltyTime  time.Duration
 	Hits             int
 	Shots            int
 	TotalTime        time.Duration
