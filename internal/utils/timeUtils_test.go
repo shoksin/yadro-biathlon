@@ -3,7 +3,7 @@ package utils
 import (
 	"testing"
 	"time"
-	"yadro-test/internal/config"
+	"yadro-biathlon/internal/config"
 )
 
 func TestFormatTimeString(t *testing.T) {

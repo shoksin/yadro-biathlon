@@ -1,3 +1,3 @@
-module yadro-test
+module yadro-biathlon
 
-go 1.23.6
+go 1.23

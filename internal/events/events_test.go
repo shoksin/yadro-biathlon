@@ -2,8 +2,8 @@ package events
 
 import (
 	"testing"
-	"yadro-test/internal/config"
-	"yadro-test/internal/models"
+	"yadro-biathlon/internal/config"
+	"yadro-biathlon/internal/models"
 )
 
 func TestParseTime(t *testing.T) {

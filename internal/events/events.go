@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"yadro-test/internal/config"
-	"yadro-test/internal/models"
+	"yadro-biathlon/internal/config"
+	"yadro-biathlon/internal/models"
 )
 
 // ParseTime removes square brackets and parses a time string using the configured format.

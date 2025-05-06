@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"yadro-test/internal/config"
-	event "yadro-test/internal/events"
-	process "yadro-test/internal/processor"
+	"yadro-biathlon/internal/config"
+	event "yadro-biathlon/internal/events"
+	process "yadro-biathlon/internal/processor"
 )
 
 func main() {

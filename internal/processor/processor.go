@@ -9,10 +9,10 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"yadro-test/internal/config"
-	"yadro-test/internal/messages"
-	"yadro-test/internal/models"
-	"yadro-test/internal/utils"
+	"yadro-biathlon/internal/config"
+	"yadro-biathlon/internal/messages"
+	"yadro-biathlon/internal/models"
+	"yadro-biathlon/internal/utils"
 )
 
 // EventProcessor manages the lifecycle of competitor events in a biathlon race.

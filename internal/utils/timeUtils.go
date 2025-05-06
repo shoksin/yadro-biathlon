@@ -3,7 +3,7 @@ package utils
 import (
 	"fmt"
 	"time"
-	"yadro-test/internal/config"
+	"yadro-biathlon/internal/config"
 )
 
 // FormatTimeString wraps a time.Time value in square brackets
