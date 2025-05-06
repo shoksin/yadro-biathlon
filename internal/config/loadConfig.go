@@ -5,10 +5,12 @@ import (
 	"os"
 )
 
+// TimeFormat defines the layout for parsing and formatting timestamps in events.
 const (
 	TimeFormat = "15:04:05.000"
 )
 
+// Configuration holds race parameters, loaded from a JSON file.
 type Configuration struct {
 	Laps        int    `json:"laps"`
 	LapLen      int    `json:"lapLen"`
@@ -18,6 +20,8 @@ type Configuration struct {
 	StartDelta  string `json:"startDelta"`
 }
 
+// LoadConfig reads and parses a JSON configuration file into Configuration.
+// The JSON must match the struct tags, otherwise Decode will return an error.
 func LoadConfig(filename string) (Configuration, error) {
 	var config Configuration
 	file, err := os.Open(filename)

@@ -8,15 +8,17 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"yadro-test/config"
-	"yadro-test/models"
+	"yadro-test/internal/config"
+	"yadro-test/internal/models"
 )
 
+// ParseTime removes square brackets and parses a time string using the configured format.
 func ParseTime(timeString string) (time.Time, error) {
 	cleanTimeString := strings.Trim(timeString, "[]")
 	return time.Parse(config.TimeFormat, cleanTimeString)
 }
 
+// ParseEvent converts a log line into a models.Event, validating action codes and parameters.
 func ParseEvent(line string) (models.Event, error) {
 	event := models.Event{}
 	timeEndIndex := strings.Index(line, "]")
@@ -39,11 +41,30 @@ func ParseEvent(line string) (models.Event, error) {
 		return event, errors.New("invalid event format: not enough parts")
 	}
 
-	eventID, err := strconv.Atoi(parts[0])
+	actionInt, err := strconv.Atoi(parts[0])
 	if err != nil {
 		return event, fmt.Errorf("invalid event ID: %v", err)
 	}
-	event.ID = eventID
+	action := models.Action(actionInt)
+
+	//проверим, что это известное действие:
+	switch action {
+	case models.ActionRegistered,
+		models.ActionStartTimeSet,
+		models.ActionOnStartLine,
+		models.ActionStarted,
+		models.ActionOnFiringRange,
+		models.ActionHit,
+		models.ActionLeftFiringRange,
+		models.ActionOnPenaltyLaps,
+		models.ActionLeftPenaltyLaps,
+		models.ActionFinishedLap,
+		models.ActionCannotContinue:
+		// всё ок
+	default:
+		return event, fmt.Errorf("unknown action ID: %d", actionInt)
+	}
+	event.Action = action
 
 	competitorID, err := strconv.Atoi(parts[1])
 	if err != nil {
@@ -58,6 +79,7 @@ func ParseEvent(line string) (models.Event, error) {
 	return event, nil
 }
 
+// LoadEvents opens a file, reads non-empty lines, and parses them into an event slice.
 func LoadEvents(filename string) ([]models.Event, error) {
 	var events []models.Event
 

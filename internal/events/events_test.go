@@ -2,7 +2,8 @@ package events
 
 import (
 	"testing"
-	"yadro-test/config"
+	"yadro-test/internal/config"
+	"yadro-test/internal/models"
 )
 
 func TestParseTime(t *testing.T) {
@@ -55,8 +56,8 @@ func TestParseEvent(t *testing.T) {
 				t.Errorf("ParseEvent(%s) failed: %v", test.input, err)
 			}
 
-			if parsedEvent.ID != test.expectedID {
-				t.Errorf("Expected ID=%d, got %d", test.expectedID, parsedEvent.ID)
+			if parsedEvent.Action != models.Action(test.expectedID) {
+				t.Errorf("Expected ID=%d, got %d", test.expectedID, parsedEvent.Action)
 			}
 			if parsedEvent.CompetitorID != test.expectedCompetitorID {
 				t.Errorf("Expected EventID=%d, got %d", test.expectedCompetitorID, parsedEvent.CompetitorID)

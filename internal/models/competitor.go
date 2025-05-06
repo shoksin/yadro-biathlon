@@ -1,20 +1,6 @@
 package models
 
-import (
-	"fmt"
-	"time"
-	"yadro-test/config"
-)
-
-const ()
-
-type Event struct {
-	Time         time.Time
-	TimeString   string
-	ID           int
-	CompetitorID int
-	ExtraParams  string
-}
+import "time"
 
 type CompetitorStatus int
 
@@ -53,23 +39,9 @@ type Competitor struct {
 	LapStartTime     time.Time
 	PenaltyStartTime time.Time
 	FullPenaltyTime  time.Duration
+	LastFiringHits   int
 	Hits             int
 	Shots            int
 	TotalTime        time.Duration
 	Comment          string
-}
-
-func FormatTimeString(t time.Time) string {
-	return "[" + t.Format(config.TimeFormat) + "]"
-}
-
-func FormatDurationString(d time.Duration) string {
-	h := d / time.Hour
-	d -= h * time.Hour
-	m := d / time.Minute
-	d -= m * time.Minute
-	s := d / time.Second
-	d -= s * time.Second
-	ms := d / time.Millisecond
-	return fmt.Sprintf("%02d:%02d:%02d.%03d", h, m, s, ms)
 }

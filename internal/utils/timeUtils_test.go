@@ -1,9 +1,9 @@
-package models
+package utils
 
 import (
 	"testing"
 	"time"
-	"yadro-test/config"
+	"yadro-test/internal/config"
 )
 
 func TestFormatTimeString(t *testing.T) {

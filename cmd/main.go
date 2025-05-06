@@ -3,24 +3,27 @@ package main
 import (
 	"flag"
 	"fmt"
-	"yadro-test/config"
-	event "yadro-test/events"
-	process "yadro-test/processor"
+	"yadro-test/internal/config"
+	event "yadro-test/internal/events"
+	process "yadro-test/internal/processor"
 )
 
 func main() {
+	//Define command-line flags
 	saveLogs := flag.String("save_logs", "", "save logs to file")
-	eventsFile := flag.String("events_file", "./config/events", "file with events")
-	configFile := flag.String("config_file", "./config/config.json", "file with config")
-	resultFile := flag.String("result_file", "resultingTable.json", "file with results")
+	eventsFile := flag.String("events_file", "./internal/config/events", "file with events")
+	configFile := flag.String("config_file", "./internal/config/config.json", "file with config")
+	resultFile := flag.String("result_file", "resultingTable", "file with results")
 	flag.Parse()
 
+	// 'conf' holds race parameters (laps, lap length, penalty length, etc.) and timing settings.
 	conf, err := config.LoadConfig(*configFile)
 	if err != nil {
 		fmt.Printf("Error loading configuration(%s): %v\n", *configFile, err)
 		return
 	}
 
+	//'processor' manages state, logs events, and generates the race report.
 	processor := process.NewEventProcessor(conf)
 
 	if *saveLogs != "" {
@@ -36,8 +39,10 @@ func main() {
 		return
 	}
 
+	// Process all events
 	processor.ProcessEvents(events)
 
+	// Generate and save the report to the result file
 	err = processor.SaveReport(*resultFile)
 	if err != nil {
 		fmt.Printf("Error saving report: %v\n", err)
@@ -47,5 +52,5 @@ func main() {
 	if *saveLogs != "" {
 		fmt.Printf("Logs saved to: %s\n", *saveLogs)
 	}
-	fmt.Printf("Report saved to:%s\n", *resultFile)
+	fmt.Printf("Report saved to: %s\n", *resultFile)
 }

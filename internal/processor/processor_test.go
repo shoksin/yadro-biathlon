@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"yadro-test/config"
-	"yadro-test/models"
+	"yadro-test/internal/config"
+	"yadro-test/internal/models"
 )
 
 func TestCheckDisqualifications(t *testing.T) {
