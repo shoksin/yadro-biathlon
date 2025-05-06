@@ -1,6 +1,9 @@
 ## System prototype for biathlon competitions
 
+Программа обрабатывает данные биатлонных соревнований: она считывает конфигурацию и события гонки, рассчитывает результаты участников с учётом времени, промахов и штрафов, а затем сохраняет итоговую таблицу в файл.
+
 ## Структура проекта:
+```none
 .
 ├── cmd
 │     └── main.go
@@ -27,7 +30,7 @@
             ├── timeUtils.go
             └── timeUtils_test.go
 ├── README.md
-
+```
 
 ## Сборка и запуск через Docker:
 
@@ -35,7 +38,7 @@
 ```bash
    docker build -t biathlon-processor .
 ```
-2. Запустите контейнер с параметрами по умолчанию:
+2. Запустите контейнер с параметрами по умолчанию:  
    --config_file=./internal/config/config.json,  
    --events_file=./internal/config/events,  
    --result_file=./results/resultingTable  
